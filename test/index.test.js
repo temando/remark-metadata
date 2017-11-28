@@ -26,7 +26,17 @@ describe('remark-metadata', () => {
     addMetadata(vfile, destFile);
 
     const result = remark().use(metadata).processSync(vfile).toString();
-    expect(result).toContain('lastModifiedDate:');
+    expect(result).toContain('lastModifiedAt:');
+  });
+
+  it('adds metadata using stat', () => {
+    const srcFile = `${fixturesDir}/existing.md`;
+    const destFile = `${runtimeDir}/existing.md`;
+    const vfile = toVFile.readSync(srcFile);
+    addMetadata(vfile, destFile);
+
+    const result = remark().use(metadata, { git: false }).processSync(vfile).toString();
+    expect(result).toContain('lastModifiedAt:');
   });
 
   it('adds metadata as new front matter', () => {
@@ -36,7 +46,7 @@ describe('remark-metadata', () => {
     addMetadata(vfile, destFile);
 
     const result = remark().use(metadata).processSync(vfile).toString();
-    expect(result).toContain('lastModifiedDate:');
+    expect(result).toContain('lastModifiedAt:');
   });
 
   it('reuses modified date from vFile data', () => {
@@ -44,9 +54,9 @@ describe('remark-metadata', () => {
     const destFile = `${runtimeDir}/existing.md`;
     const vfile = toVFile.readSync(srcFile);
     addMetadata(vfile, destFile);
-    vfile.data.lastModifiedDate = 'Tue, 28 Nov 2017 02:44:25 GMT';
+    vfile.data.lastModifiedAt = 'Tue, 28 Nov 2017 02:44:25 GMT';
 
     const result = remark().use(metadata).processSync(vfile).toString();
-    expect(result).toContain('lastModifiedDate:');
+    expect(result).toContain('lastModifiedAt:');
   });
 });

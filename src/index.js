@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { execSync } = require('child_process');
 const jsYaml = require('js-yaml');
 
 const PLUGIN_NAME = 'remark-metadata';
@@ -61,25 +62,45 @@ function writeMatter(frontmatterNode, meta) {
 /**
  * Given the vFile, returns an object containing possible meta data:
  *
- * - lastModifiedDate
+ * - lastModifiedAt
  *
- * @param  {vFile} vFile
+ * @todo extract this out, there may be other metadata to add and we don't want
+ *       a mega function to handle it all.
+ * @param  {vFile}   vFile
+ * @param  {boolean} hasGit
  * @return {Object}
  */
-function getMetadata(vFile) {
+function getMetadata(vFile, hasGit) {
   const meta = {};
+  let isSet = false;
 
-  // Is there already a date?
-  if (vFile.data && vFile.data.lastModifiedDate) {
-    meta.lastModifiedDate = vFile.data.lastModifiedDate;
+  // Does the vFile already contain a date?
+  if (vFile.data && vFile.data.lastModifiedAt) {
+    meta.lastModifiedAt = vFile.data.lastModifiedAt;
+    isSet = true;
   }
 
-  // Otherwise determine last modified date.
-  try {
-    const stats = fs.statSync(vFile.path);
-    meta.lastModifiedDate = new Date(stats.mtime).toUTCString();
-  } catch (error) {
-    vFile.message(error, null, PLUGIN_NAME);
+  // Do we have Git? We can get it way?
+  if (!isSet && hasGit) {
+    const cmd = `git log -1 --format="%ad" -- ${vFile.path}`;
+    const modified = execSync(cmd, { encoding: 'utf-8' }).trim();
+
+    // New files that aren't committed yet will return nothing
+    if (modified) {
+      meta.lastModifiedAt = new Date(modified).toUTCString();
+      isSet = true;
+    }
+  }
+
+  // Otherwise fallback to using the file's `mtime`.
+  if (!isSet) {
+    try {
+      const stats = fs.statSync(vFile.path);
+      meta.lastModifiedAt = new Date(stats.mtime).toUTCString();
+      isSet = true;
+    } catch (error) {
+      vFile.message(error, null, PLUGIN_NAME);
+    }
   }
 
   return meta;
@@ -93,7 +114,9 @@ function getMetadata(vFile) {
  * @link https://github.com/vfile/vfile
  * @return {function}
  */
-function metadata() {
+function metadata(options = {}) {
+  const hasGit = options.git || true;
+
   /**
    * @param {object}    ast   MDAST
    * @param {vFile}     vFile
@@ -105,7 +128,7 @@ function metadata() {
     const frontmatterNode = getMatter(ast);
 
     // Get metadata
-    const meta = getMetadata(vFile);
+    const meta = getMetadata(vFile, hasGit);
 
     // Write metadata (by reference)
     writeMatter(frontmatterNode, meta);

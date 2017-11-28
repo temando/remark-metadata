@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 Nil.
 
+## [v0.2.0] - 2017-11-28
+
+### Changed
+
+- `remark-metadata` now supports a plugin option, `git`. If set, this will determine the modification dates using git commits. Defaults to `true`.
+- `lastModifiedDate` renamed to `lastModifiedAt`.
+
 ## [v0.1.1] - 2017-11-28
 
 ### Fixed

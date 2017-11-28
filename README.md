@@ -8,7 +8,10 @@ Adds meta data about a Markdown file to a Markdown file, formatted as [Front Mat
 
 The following meta data is added:
 
-- `lastModifiedDate`
+- `lastModifiedAt` using one of the following heuristics:
+  1. the `vFile` has the property `data.lastModifiedAt` defined
+  1. if [`git`](https://git-scm.com/) exists, the commit time of the file
+  1. the `mtime` reported by Node's `stat` method.
 
 ## Installation
 
@@ -44,7 +47,7 @@ var example = vfile.readSync('example.md');
 
 remark()
   .use(frontmatter)
-  .use(metadata)
+  .use(metadata, { git: true })
   .process(example, function (err, file) {
     if (err) throw err;
     console.log(String(file))
@@ -67,3 +70,9 @@ This is an example
 ```
 
 If a file has no Front Matter, it will be added by this plugin.
+
+### Options
+
+The plugin has the following options:
+
+- `git`: Enables determining modification dates using git (defaults: `true`)

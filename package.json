@@ -1,6 +1,6 @@
 {
   "name": "remark-metadata",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Add metadata about a Markdown file as Front Matter.",
   "license": "MIT",
   "keywords": [
