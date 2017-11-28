@@ -1,0 +1,41 @@
+{
+  "name": "remark-metadata",
+  "version": "0.1.0",
+  "description": "Add metadata about a Markdown file as Front Matter.",
+  "license": "MIT",
+  "keywords": [
+    "remark",
+    "front-matter",
+    "remark-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:temando/remark-metadata.git"
+  },
+  "dependencies": {
+    "js-yaml": "^3.10.0",
+    "remark-frontmatter": "^1.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.2.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.0.0",
+    "jest": "^21.2.1",
+    "remark-parse": "^4.0.0",
+    "remark-stringify": "^4.0.0",
+    "to-vfile": "^2.1.2",
+    "unified": "^6.1.5",
+    "vfile": "^2.2.0"
+  },
+  "scripts": {
+    "lint": "$(npm bin)/eslint src",
+    "teardown": "rm -rf test/runtime/*",
+    "test": "npm run teardown && $(npm bin)/jest",
+    "test:coverage": "npm run teardown && $(npm bin)/jest --coverage --coverageReporters text text-summary",
+    "preversion": "npm run lint && npm run test"
+  },
+  "main": "src/index.js",
+  "files": [
+    "src"
+  ]
+}
