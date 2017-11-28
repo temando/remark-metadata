@@ -55,7 +55,7 @@ function writeMatter(frontmatterNode, meta) {
   Object.assign(fm, meta);
 
   // stringify
-  frontmatterNode.value = jsYaml.safeDump(fm); // eslint-disable-line no-param-reassign
+  frontmatterNode.value = jsYaml.safeDump(fm).trim(); // eslint-disable-line no-param-reassign
 }
 
 /**
