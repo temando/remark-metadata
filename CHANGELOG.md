@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased][]
 
+## [0.2.1][] - 2018-01-18
+
 ### Fixed
 
 - [https://github.com/temando/remark-metadata/issues/1](#1) - Fix issue when disabling `git`.
@@ -27,7 +29,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 Initial release of `remark-metadata` plugin.
 
-[Unreleased]: https://github.com/temando/remark-metadata/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/temando/remark-metadata/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/temando/remark-metadata/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/temando/remark-metadata/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/temando/remark-metadata/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/temando/remark-metadata/tree/v0.1.0
