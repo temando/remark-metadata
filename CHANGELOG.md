@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## Unreleased
 
-Nil.
+### Fixed
+
+- [https://github.com/temando/remark-metadata/issues/1](#1) - Fix issue when disabling `git`.
 
 ## [v0.2.0] - 2017-11-28
 

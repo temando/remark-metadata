@@ -115,7 +115,7 @@ function getMetadata(vFile, hasGit) {
  * @return {function}
  */
 function metadata(options = {}) {
-  const hasGit = options.git || true;
+  const hasGit = options.git !== undefined ? options.git : true;
 
   /**
    * @param {object}    ast   MDAST
