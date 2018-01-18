@@ -17,6 +17,7 @@
     "remark-frontmatter": "^1.1.0"
   },
   "devDependencies": {
+    "changelog-verify": "^1.1.0",
     "eslint": "^4.2.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.0.0",
@@ -25,6 +26,7 @@
     "remark-stringify": "^4.0.0",
     "to-vfile": "^2.1.2",
     "unified": "^6.1.5",
+    "version-changelog": "^2.1.0",
     "vfile": "^2.2.0"
   },
   "scripts": {
@@ -32,7 +34,8 @@
     "teardown": "rm -rf test/runtime/*",
     "test": "npm run teardown && $(npm bin)/jest",
     "test:coverage": "npm run teardown && $(npm bin)/jest --coverage --coverageReporters text text-summary",
-    "preversion": "npm run lint && npm run test"
+    "preversion": "npm run lint && npm run test",
+    "version": "version-changelog CHANGELOG.md && changelog-verify CHANGELOG.md && git add CHANGELOG.md"
   },
   "main": "src/index.js",
   "files": [
