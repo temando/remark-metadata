@@ -43,8 +43,9 @@ function getMatter(ast) {
  *
  * @param  {Object} frontmatterNode a MDAST-like node for Frontmatter.
  * @param  {Object} meta
+ * @param  {Object} metadataConfig
  */
-function writeMatter(frontmatterNode, meta) {
+function writeMatter(frontmatterNode, meta, metadataConfig) {
   const fm = {};
 
   // parse any existing frontmatter
@@ -53,57 +54,157 @@ function writeMatter(frontmatterNode, meta) {
   }
 
   // merge in meta
-  Object.assign(fm, meta);
+  Object.entries(meta).forEach(([name, value]) => {
+    const { shouldUpdate } = metadataConfig[name];
+
+    if (typeof shouldUpdate !== 'function' || shouldUpdate(value, fm[name])) {
+      fm[name] = value;
+    }
+  });
 
   // stringify
   frontmatterNode.value = jsYaml.safeDump(fm).trim(); // eslint-disable-line no-param-reassign
 }
 
 /**
- * Given the vFile, returns an object containing possible meta data:
+ * Get the modified time of a vFile.
  *
- * - lastModifiedAt
+ * If git option is true return the last commit time of this vFile,
+ * otherwise return the mtime.
  *
- * @todo extract this out, there may be other metadata to add and we don't want
- *       a mega function to handle it all.
  * @param  {vFile}   vFile
- * @param  {boolean} hasGit
- * @return {Object}
+ * @param  {Object}  options {git, gitLogGrep}
+ * @return {string}
  */
-function getMetadata(vFile, hasGit) {
-  const meta = {};
-  let isSet = false;
-
-  // Does the vFile already contain a date?
-  if (vFile.data && vFile.data.lastModifiedAt) {
-    meta.lastModifiedAt = vFile.data.lastModifiedAt;
-    isSet = true;
-  }
-
-  // Do we have Git? We can get it way?
-  if (!isSet && hasGit) {
-    const cmd = `git log -1 --format="%ad" -- ${vFile.path}`;
-    const modified = execSync(cmd, { encoding: 'utf-8' }).trim();
-
-    // New files that aren't committed yet will return nothing
-    if (modified) {
-      meta.lastModifiedAt = new Date(modified).toUTCString();
-      isSet = true;
-    }
-  }
-
-  // Otherwise fallback to using the file's `mtime`.
-  if (!isSet) {
+function getModifiedTime(vFile, { git, gitLogGrep }) {
+  if (git) {
+    const cmd = `git log -1 --format="%ad" ${gitLogGrep} -- "${vFile.path}"`;
+    let modified;
     try {
-      const stats = fs.statSync(vFile.path);
-      meta.lastModifiedAt = new Date(stats.mtime).toUTCString();
-      isSet = true;
+      modified = execSync(cmd, { encoding: 'utf-8' }).trim();
     } catch (error) {
       vFile.message(error, null, PLUGIN_NAME);
     }
+
+    // New files that aren't committed yet will return nothing
+    if (modified) {
+      return new Date(modified).toUTCString();
+    }
+
+    return '';
   }
 
+  try {
+    const stats = fs.statSync(vFile.path);
+    return new Date(stats.mtime).toUTCString();
+  } catch (error) /* istanbul ignore next */ {
+    vFile.message(error, null, PLUGIN_NAME);
+  }
+
+  return '';
+}
+
+/**
+ * Get the created (first commit) time of a vFile.
+ *
+ * @param  {vFile}   vFile
+ * @return {string}
+ */
+function getCreatedTime(vFile) {
+  const cmd = `git log --reverse --format="%ad" -- "${vFile.path}"`;
+  let created;
+  try {
+    [created] = execSync(cmd, { encoding: 'utf-8' }).trim().split('\n');
+  } catch (error) {
+    vFile.message(error, null, PLUGIN_NAME);
+  }
+
+  // New files that aren't committed yet will return nothing
+  if (created) {
+    return new Date(created).toUTCString();
+  }
+
+  return '';
+}
+
+/**
+ * Get the parameter of value function of metadata.
+ *
+ * @param  {Object}   data {vFile, oldFrontMatter, gitLogGrep}
+ * @return {Object}
+ */
+function createValueFunctionParam({ vFile, oldFrontMatter, gitLogGrep }) {
+  const param = {
+    vFile,
+    oldFrontMatter,
+  };
+
+  Object.defineProperties(param, {
+    gitModifiedTime: {
+      get() {
+        return getModifiedTime(vFile, { git: true, gitLogGrep });
+      },
+    },
+    modifiedTime: {
+      get() {
+        return getModifiedTime(vFile, { git: false, gitLogGrep });
+      },
+    },
+    gitCreatedTime: {
+      get() {
+        return getCreatedTime(vFile);
+      },
+    },
+  });
+
+  return param;
+}
+
+/**
+ * Given the vFile, metadata returns an object containing possible meta data
+ *
+ * @param  {vFile}   vFile
+ * @param  {Object}  options {gitLogGrep, oldFrontMatter}
+ * @param  {Object}  metadata
+ * @return {Object}
+ */
+function getMetadata(vFile, { gitLogGrep, oldFrontMatter }, metadataConfig) {
+  /* eslint-disable no-use-before-define */
+  const meta = {};
+
+  Object.entries(metadataConfig).forEach(([name, config]) => {
+    const value =
+      typeof config === 'string' || typeof config === 'function'
+        ? config
+        : config.value;
+
+    if (value === metadata.GIT_LAST_MODIFIED_TIME) {
+      meta[name] = getModifiedTime(vFile, { git: true, gitLogGrep });
+      return;
+    }
+
+    if (value === metadata.LAST_MODIFIED_TIME) {
+      meta[name] = getModifiedTime(vFile, { git: false, gitLogGrep });
+      return;
+    }
+
+    if (value === metadata.GIT_CREATED_TIME) {
+      meta[name] = getCreatedTime(vFile);
+      return;
+    }
+
+    if (typeof value === 'string') {
+      meta[name] = value;
+      return;
+    }
+
+    if (typeof value === 'function') {
+      meta[name] = value(createValueFunctionParam({ vFile, oldFrontMatter, gitLogGrep }));
+    }
+  });
+
   return meta;
+  /* eslint-enable no-use-before-define */
 }
 
 /**
@@ -115,7 +216,11 @@ function getMetadata(vFile, hasGit) {
  * @return {function}
  */
 function metadata(options = {}) {
-  const hasGit = options.git !== undefined ? options.git : true;
+  const gitLogGrep =
+    typeof options.gitExcludeCommit === 'string'
+      ? ` --grep="${options.gitExcludeCommit}" --invert-grep `
+      : '';
+  const metadataConfig = options.metadata || {};
 
   /**
    * @param {object}    ast   MDAST
@@ -128,10 +233,17 @@ function metadata(options = {}) {
     const frontmatterNode = getMatter(ast);
 
     // Get metadata
-    const meta = getMetadata(vFile, hasGit);
+    const meta = getMetadata(
+      vFile,
+      {
+        gitLogGrep,
+        oldFrontMatter: jsYaml.safeLoad(frontmatterNode.value),
+      },
+      metadataConfig,
+    );
 
     // Write metadata (by reference)
-    writeMatter(frontmatterNode, meta);
+    writeMatter(frontmatterNode, meta, metadataConfig);
 
     // If we don't have a Matter node in the AST, put it in.
     if (!getMatterNode(ast)) {
@@ -145,5 +257,9 @@ function metadata(options = {}) {
     return ast;
   };
 }
+
+metadata.GIT_LAST_MODIFIED_TIME = 'REMARK_METADATA_GIT_LAST_MODIFIED_TIME';
+metadata.GIT_CREATED_TIME = 'REMARK_METADATA_GIT_CREATED_TIME';
+metadata.LAST_MODIFIED_TIME = 'REMARK_METADATA_LAST_MODIFIED_TIME';
 
 module.exports = metadata;

@@ -30,10 +30,10 @@
     "vfile": "^2.2.0"
   },
   "scripts": {
-    "lint": "$(npm bin)/eslint src",
+    "lint": "eslint src",
     "teardown": "rm -rf test/runtime/*",
-    "test": "npm run teardown && $(npm bin)/jest",
-    "test:coverage": "npm run teardown && $(npm bin)/jest --coverage --coverageReporters text text-summary",
+    "test": "npm run teardown && jest",
+    "test:coverage": "npm run teardown && jest --coverage --coverageReporters text text-summary",
     "preversion": "npm run lint && npm run test",
     "version": "version-changelog CHANGELOG.md && changelog-verify CHANGELOG.md && git add CHANGELOG.md"
   },

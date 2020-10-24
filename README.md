@@ -6,13 +6,6 @@
 
 Adds meta data about a Markdown file to a Markdown file, formatted as [Front Matter](https://jekyllrb.com/docs/frontmatter/).
 
-The following meta data is added:
-
-- `lastModifiedAt` using one of the following heuristics:
-  1. the `vFile` has the property `data.lastModifiedAt` defined
-  1. if [`git`](https://git-scm.com/) exists, the commit time of the file
-  1. the `mtime` reported by Node's `stat` method.
-
 ## Installation
 
 ```sh
@@ -47,11 +40,38 @@ var example = vfile.readSync('example.md');
 
 remark()
   .use(frontmatter)
-  .use(metadata, { git: true })
+  .use(metadata, {
+    gitExcludeCommit: 'chore:',
+    metadata: {
+      // string
+      tag: 'remark-metadata',
+      // constant
+      gitCreated: metadata.GIT_CREATED_TIME,
+      gitUpdated: metadata.GIT_LAST_MODIFIED_TIME,
+      updated: metadata.LAST_MODIFIED_TIME,
+      // function
+      duration({ gitCreatedTime, modifiedTime }) {
+        return (
+          new Date(modifiedTime).getTime() - new Date(gitCreatedTime).getTime()
+        );
+      },
+      // object
+      title: {
+        value({ vFile }) {
+          return vFile.basename;
+        },
+        shouldUpdate(newValue, oldValue) {
+          if (oldValue === 'Example') {
+            return true;
+          }
+          return false;
+        },
+      },
+    },
+  })
   .process(example, function (err, file) {
     if (err) throw err;
-    console.log(String(file))
-    })
+    console.log(String(file));
   });
 ```
 
@@ -61,7 +81,6 @@ This will output the following Markdown:
 ---
 title: Example
 lastModifiedDate: 'Tue, 28 Nov 2017 02:44:25 GMT'
-
 ---
 
 # Example
@@ -75,4 +94,26 @@ If a file has no Front Matter, it will be added by this plugin.
 
 The plugin has the following options:
 
-- `git`: Enables determining modification dates using git (defaults: `true`)
+- `gitExcludeCommit`: A regexp string to exclude commits when get the last modified time through git. This is useful to exclude commits of chore.
+- `metadata`: An object describe each metadata.
+- `metadata[key]`: A string value, or a constant, or a function that will be called with an object parameter and using the string it returns as the value, or an object contain options below.
+
+```js
+// the object parameter of function:
+{
+  gitModifiedTime,
+  gitCreatedTime,
+  modifiedTime,
+  vFile,
+  oldFrontMatter,
+}
+```
+
+- `metadata[key].value`: A string value, or a constant, or a function, like `metadata[key]`.
+- `metadata[key].shouldUpdate`: A function will be called with old and new value of this metadata. The metadata will update, if this function return truthy.
+
+## Constants
+
+- `GIT_CREATED_TIME`: A value of metadata to set the created time of a markdown file. Will use the first commit time of Git.
+- `GIT_LAST_MODIFIED_TIME`: A value of metadata to set the last modified time of a markdown file. Will use the last commit time of Git.
+- `LAST_MODIFIED_TIME`: A value of metadata to set the last modified time of a markdown file. Will use the mtime of file.
